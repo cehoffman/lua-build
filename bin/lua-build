@@ -397,6 +397,12 @@ build_package_luajit() {
   } >&4 2>&1
 }
 
+build_package_luvit() {
+  { env -u CPPFLAGS -u LDFLAGS "$MAKE" $MAKE_OPTS PREFIX="$PREFIX_PATH"
+    "$MAKE" $MAKE_OPTS install PREFIX="$PREFIX_PATH"
+  } >&4 2>&1
+}
+
 # build_package_luasrc() {
 #   local package_name="$1"
 

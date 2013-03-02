@@ -1,0 +1,1 @@
+install_git "luvit-dev" "https://github.com/luvit/luvit.git" master luvit
