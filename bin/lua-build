@@ -521,7 +521,7 @@ else
 fi
 
 if [ -z "$LUA_BUILD_MIRROR_URL" ]; then
-  LUA_BUILD_MIRROR_URL="http://dqw8nmjcqpjn7.cloudfront.net"
+  LUA_BUILD_SKIP_MIRROR=1
 else
   LUA_BUILD_MIRROR_URL="${LUA_BUILD_MIRROR_URL%/}"
 fi
