@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-RUBY_BUILD_VERSION="20130227"
+LUA_BUILD_VERSION="20130227"
 
 set -E
 exec 3<&2 # preserve original stderr at fd 3
@@ -226,8 +226,8 @@ fetch_tarball() {
     checksum="${package_url#*#}"
     package_url="${package_url%%#*}"
 
-    if [ -n "$RUBY_BUILD_MIRROR_URL" ]; then
-      mirror_url="${RUBY_BUILD_MIRROR_URL}/$checksum"
+    if [ -n "$LUA_BUILD_MIRROR_URL" ]; then
+      mirror_url="${LUA_BUILD_MIRROR_URL}/$checksum"
     fi
   fi
 
@@ -246,10 +246,10 @@ fetch_tarball() {
 }
 
 symlink_tarball_from_cache() {
-  [ -n "$RUBY_BUILD_CACHE_PATH" ] || return 1
+  [ -n "$LUA_BUILD_CACHE_PATH" ] || return 1
 
   local package_filename="$1"
-  local cached_package_filename="${RUBY_BUILD_CACHE_PATH}/$package_filename"
+  local cached_package_filename="${LUA_BUILD_CACHE_PATH}/$package_filename"
   local checksum="$2"
 
   [ -e "$cached_package_filename" ] || return 1
@@ -270,8 +270,8 @@ download_tarball() {
     verify_checksum "$package_filename" "$checksum"
   } >&4 2>&1 || return 1
 
-  if [ -n "$RUBY_BUILD_CACHE_PATH" ]; then
-    local cached_package_filename="${RUBY_BUILD_CACHE_PATH}/$package_filename"
+  if [ -n "$LUA_BUILD_CACHE_PATH" ]; then
+    local cached_package_filename="${LUA_BUILD_CACHE_PATH}/$package_filename"
     { mv "$package_filename" "$cached_package_filename"
       ln -s "$cached_package_filename" "$package_filename"
     } >&4 2>&1 || return 1
@@ -313,7 +313,7 @@ build_package() {
   shift
 
   if [ "$#" -eq 0 ]; then
-    local commands="standard"
+    local commands="lua"
   else
     local commands="$*"
   fi
@@ -335,7 +335,7 @@ package_option() {
   eval "$variable=( \"\${value[@]}\" )"
 }
 
-build_package_standard() {
+build_package_configure() {
   local package_name="$1"
 
   if [ "${MAKEOPTS+defined}" ]; then
@@ -344,7 +344,7 @@ build_package_standard() {
     MAKE_OPTS="-j 2"
   fi
 
-  # Support YAML_CONFIGURE_OPTS, RUBY_CONFIGURE_OPTS, etc.
+  # Support YAML_CONFIGURE_OPTS, LUA_CONFIGURE_OPTS, etc.
   local package_var_name="$(capitalize "${package_name%%-*}")"
   local PACKAGE_CONFIGURE="${package_var_name}_CONFIGURE"
   local PACKAGE_PREFIX_PATH="${package_var_name}_PREFIX_PATH"
@@ -360,71 +360,53 @@ build_package_standard() {
   } >&4 2>&1
 }
 
+build_package_lua() {
+  local package_name="$1"
+
+  if [ "${MAKEOPTS+defined}" ]; then
+    MAKE_OPTS="$MAKEOPTS"
+  elif [ -z "${MAKE_OPTS+defined}" ]; then
+    MAKE_OPTS="-j 2"
+  fi
+
+  local os_name=$(uname -s | tr '[A-Z]' '[a-z]')
+  local platform
+  [ "$os_name" == darwin ] && platform=macosx
+  [ "$os_name" == *cygwin* ] && platform=posix
+  [ "$os_name" == *mingw* ] && platform=mingw
+  [ "$os_name" == *bsd* ] && platform=bsd
+  [ "$os_name" == *freebsd* ] && platform=freebsd
+  [ "$os_name" == *linux* ] && platform=linux
+  [ "$os_name" == *sunos* ] && platform=solaris
+  [ "$os_name" == *aix* ] && platform=aix
+
+  { "$MAKE" $MAKE_OPTS "${platform:-posix}" INSTALL_TOP="$PREFIX_PATH" INSTALL_MAN="$PREFIX_PATH/share/man/man1"
+    "$MAKE" $MAKE_OPTS install INSTALL_TOP="$PREFIX_PATH" INSTALL_MAN="$PREFIX_PATH/share/man/man1"
+  } >&4 2>&1
+}
+
 build_package_autoconf() {
   { autoconf
   } >&4 2>&1
 }
 
-build_package_ruby() {
-  local package_name="$1"
-
-  { "$RUBY_BIN" setup.rb
+build_package_luajit() {
+  local PACKAGE_CFLAGS="${package_var_name}_CFLAGS"
+  { "$MAKE" $MAKE_OPTS amalg PREFIX="$PREFIX_PATH" XCFLAGS="${!PACKAGE_CFLAGS:--DLUAJIT_ENABLE_LUA52COMPAT}"
+    "$MAKE" $MAKE_OPTS install PREFIX="$PREFIX_PATH"
   } >&4 2>&1
 }
 
-build_package_ree_installer() {
-  local options=""
-  if [[ "Darwin" = "$(uname)" ]]; then
-    options="--no-tcmalloc"
-  fi
+# build_package_luasrc() {
+#   local package_name="$1"
 
-  # Work around install_useful_libraries crash with --dont-install-useful-gems
-  mkdir -p "$PREFIX_PATH/lib/ruby/gems/1.8/gems"
-
-  { ./installer --auto "$PREFIX_PATH" --dont-install-useful-gems $options $CONFIGURE_OPTS
-  } >&4 2>&1
-}
-
-build_package_rbx() {
-  local package_name="$1"
-
-  { ./configure --prefix="$PREFIX_PATH" --gemsdir="$PREFIX_PATH"
-    rake install
-  } >&4 2>&1
-}
-
-build_package_maglev() {
-  build_package_copy
-
-  { cd "${PREFIX_PATH}"
-    ./install.sh
-    cd "${PREFIX_PATH}/bin"
-    echo "Creating symlink for ruby*"
-    ln -fs maglev-ruby ruby
-    echo "Creating symlink for irb*"
-    ln -fs maglev-irb irb
-  } >&4 2>&1
-  echo
-  echo "Run 'maglev start' to start up the stone before using 'ruby' or 'irb'"
-}
-
-build_package_jruby() {
-  build_package_copy
-  cd "${PREFIX_PATH}/bin"
-  ln -fs jruby ruby
-  install_jruby_launcher
-  remove_windows_files
-}
-
-install_jruby_launcher() {
-  cd "${PREFIX_PATH}/bin"
-  { ./ruby gem install jruby-launcher
-  } >&4 2>&1
-}
+#   { "$LUA_BIN" setup.rb
+#   } >&4 2>&1
+# }
 
 remove_windows_files() {
   cd "$PREFIX_PATH"
-  rm -f bin/*.exe bin/*.dll bin/*.bat bin/jruby.sh
+  rm -f bin/*.exe bin/*.dll bin/*.bat bin/jlua.sh
 }
 
 build_package_copy() {
@@ -441,146 +423,18 @@ after_install_package() {
 }
 
 fix_directory_permissions() {
-  # Ensure installed directories are not world-writable to avoid Bundler warnings
+  # Ensure installed directories are not world-writable, just good practice
   find "$PREFIX_PATH" -type d \( -perm -020 -o -perm -002 \) -exec chmod go-w {} \;
 }
 
-require_gcc() {
-  local gcc="$(locate_gcc || true)"
-
-  if [ -z "$gcc" ]; then
-    local esc=$'\033'
-    { echo
-      echo "${esc}[1mERROR${esc}[0m: This package must be compiled with GCC, but ruby-build couldn't"
-      echo "find a suitable \`gcc\` executable on your system. Please install GCC"
-      echo "and try again."
-      echo
-
-      if [ "$(uname -s)" = "Darwin" ]; then
-        echo "${esc}[1mDETAILS${esc}[0m: Apple no longer includes the official GCC compiler with Xcode"
-        echo "as of version 4.2. Instead, the \`gcc\` executable is a symlink to"
-        echo "\`llvm-gcc\`, a modified version of GCC which outputs LLVM bytecode."
-        echo
-        echo "For most programs the \`llvm-gcc\` compiler works fine. However,"
-        echo "versions of Ruby older than 1.9.3-p125 are incompatible with"
-        echo "\`llvm-gcc\`. To build older versions of Ruby you must have the official"
-        echo "GCC compiler installed on your system."
-        echo
-        echo "${esc}[1mTO FIX THE PROBLEM${esc}[0m: Install the official GCC compiler using these"
-        echo "packages: ${esc}[4mhttps://github.com/kennethreitz/osx-gcc-installer/downloads${esc}[0m"
-        echo
-        echo "You will need to install the official GCC compiler to build older"
-        echo "versions of Ruby even if you have installed Apple's Command Line Tools"
-        echo "for Xcode package. The Command Line Tools for Xcode package only"
-        echo "includes \`llvm-gcc\`."
-      fi
-    } >&3
-    return 1
-  fi
-
-  export CC="$gcc"
-}
-
-locate_gcc() {
-  local gcc gccs
-  IFS=: gccs=($(gccs_in_path))
-
-  verify_gcc "$CC" ||
-  verify_gcc "$(command -v gcc || true)" || {
-    for gcc in "${gccs[@]}"; do
-      verify_gcc "$gcc" && break || true
-    done
-  }
-
-  return 1
-}
-
-gccs_in_path() {
-  local gcc path paths
-  local gccs=()
-  IFS=: paths=($PATH)
-
-  shopt -s nullglob
-  for path in "${paths[@]}"; do
-    for gcc in "$path"/gcc-*; do
-      gccs["${#gccs[@]}"]="$gcc"
-    done
-  done
-  shopt -u nullglob
-
-  printf :%s "${gccs[@]}"
-}
-
-verify_gcc() {
-  local gcc="$1"
-  if [ -z "$gcc" ]; then
-    return 1
-  fi
-
-  local version="$("$gcc" --version || true)"
-  if [ -z "$version" ]; then
-    return 1
-  fi
-
-  if echo "$version" | grep LLVM >/dev/null; then
-    return 1
-  fi
-
-  echo "$gcc"
-}
-
-has_broken_mac_openssl() {
-  [ "$(uname -s)" = "Darwin" ] &&
-  [ "$(openssl version 2>/dev/null || true)" = "OpenSSL 0.9.8r 8 Feb 2011" ] &&
-  [[ "$RUBY_CONFIGURE_OPTS" != *--with-openssl-dir=* ]]
-}
-
-build_package_mac_openssl() {
-  # Install to a subdirectory since we don't want shims for bin/openssl.
-  OPENSSL_PREFIX_PATH="${PREFIX_PATH}/openssl"
-
-  # Put openssl.conf, certs, etc in ~/.rbenv/versions/*/openssl/ssl
-  OPENSSLDIR="${OPENSSLDIR:-$OPENSSL_PREFIX_PATH/ssl}"
-
-  # Tell Ruby to use this openssl for its extension.
-  package_option ruby configure --with-openssl-dir="$OPENSSL_PREFIX_PATH"
-
-  # Hint OpenSSL that we prefer a 64-bit build.
-  export KERNEL_BITS="64"
-  OPENSSL_CONFIGURE="${OPENSSL_CONFIGURE:-./config}"
-
-  # Compile a shared lib with zlib dynamically linked, no kerberos.
-  package_option openssl configure --openssldir="$OPENSSLDIR" zlib-dynamic no-krb5 shared
-
-  # Default MAKE_OPTS are -j 2 which can confuse the build. Thankfully, make
-  # gives precedence to the last -j option, so we can override that.
-  package_option openssl make -j 1
-
-  build_package_standard "$@"
-
-  # Extract root certs from the system keychain in .pem format and rehash.
-  local pem_file="$OPENSSLDIR/cert.pem"
-  security find-certificate -a -p /Library/Keychains/System.keychain > "$pem_file"
-  security find-certificate -a -p /System/Library/Keychains/SystemRootCertificates.keychain >> "$pem_file"
-}
-
-# Post-install check that the openssl extension was built.
-build_package_verify_openssl() {
-  "$RUBY_BIN" -e 'begin
-    require "openssl"
-  rescue LoadError
-    abort "The Ruby openssl extension was not compiled. Missing the OpenSSL lib?"
-  end' >&4 2>&1
-}
-
 version() {
-  echo "ruby-build ${RUBY_BUILD_VERSION}"
+  echo "lua-build ${LUA_BUILD_VERSION}"
 }
 
 usage() {
   { version
-    echo "usage: ruby-build [-k|--keep] [-v|--verbose] definition prefix"
-    echo "       ruby-build --definitions"
+    echo "usage: lua-build [-k|--keep] [-v|--verbose] definition prefix"
+    echo "       lua-build --definitions"
   } >&2
 
   if [ -z "$1" ]; then
@@ -589,7 +443,7 @@ usage() {
 }
 
 list_definitions() {
-  { for definition in "${RUBY_BUILD_ROOT}/share/ruby-build/"*; do
+  { for definition in "${LUA_BUILD_ROOT}/share/lua-build/"*; do
       echo "${definition##*/}"
     done
   } | sort
@@ -599,7 +453,7 @@ list_definitions() {
 
 unset VERBOSE
 unset KEEP_BUILD_PATH
-RUBY_BUILD_ROOT="$(abs_dirname "$0")/.."
+LUA_BUILD_ROOT="$(abs_dirname "$0")/.."
 
 parse_options "$@"
 
@@ -636,11 +490,11 @@ DEFINITION_PATH="${ARGUMENTS[0]}"
 if [ -z "$DEFINITION_PATH" ]; then
   usage
 elif [ ! -e "$DEFINITION_PATH" ]; then
-  BUILTIN_DEFINITION_PATH="${RUBY_BUILD_ROOT}/share/ruby-build/${DEFINITION_PATH}"
+  BUILTIN_DEFINITION_PATH="${LUA_BUILD_ROOT}/share/lua-build/${DEFINITION_PATH}"
   if [ -e "$BUILTIN_DEFINITION_PATH" ]; then
     DEFINITION_PATH="$BUILTIN_DEFINITION_PATH"
   else
-    echo "ruby-build: definition not found: ${DEFINITION_PATH}" >&2
+    echo "lua-build: definition not found: ${DEFINITION_PATH}" >&2
     exit 1
   fi
 fi
@@ -656,49 +510,42 @@ else
   TMP="${TMPDIR%/}"
 fi
 
-# Work around warnings building Ruby 2.0 on Clang 2.x
-if type clang &>/dev/null; then
-  if "${CC:-clang}" -x c /dev/null -E -Wno-error=shorten-64-to-32 &>/dev/null; then
-    RUBY_CFLAGS="$RUBY_CFLAGS -Wno-error=shorten-64-to-32"
-  fi
-fi
-
 if [ -z "$MAKE" ]; then
   export MAKE="make"
 fi
 
-if [ -n "$RUBY_BUILD_CACHE_PATH" ] && [ -d "$RUBY_BUILD_CACHE_PATH" ]; then
-  RUBY_BUILD_CACHE_PATH="${RUBY_BUILD_CACHE_PATH%/}"
+if [ -n "$LUA_BUILD_CACHE_PATH" ] && [ -d "$LUA_BUILD_CACHE_PATH" ]; then
+  LUA_BUILD_CACHE_PATH="${LUA_BUILD_CACHE_PATH%/}"
 else
-  unset RUBY_BUILD_CACHE_PATH
+  unset LUA_BUILD_CACHE_PATH
 fi
 
-if [ -z "$RUBY_BUILD_MIRROR_URL" ]; then
-  RUBY_BUILD_MIRROR_URL="http://dqw8nmjcqpjn7.cloudfront.net"
+if [ -z "$LUA_BUILD_MIRROR_URL" ]; then
+  LUA_BUILD_MIRROR_URL="http://dqw8nmjcqpjn7.cloudfront.net"
 else
-  RUBY_BUILD_MIRROR_URL="${RUBY_BUILD_MIRROR_URL%/}"
+  LUA_BUILD_MIRROR_URL="${LUA_BUILD_MIRROR_URL%/}"
 fi
 
-if [ -n "$RUBY_BUILD_SKIP_MIRROR" ]; then
-  unset RUBY_BUILD_MIRROR_URL
+if [ -n "$LUA_BUILD_SKIP_MIRROR" ]; then
+  unset LUA_BUILD_MIRROR_URL
 fi
 
 if echo test | compute_md5 >/dev/null; then
   HAS_MD5_SUPPORT=1
 else
   unset HAS_MD5_SUPPORT
-  unset RUBY_BUILD_MIRROR_URL
+  unset LUA_BUILD_MIRROR_URL
 fi
 
 SEED="$(date "+%Y%m%d%H%M%S").$$"
-LOG_PATH="${TMP}/ruby-build.${SEED}.log"
-RUBY_BIN="${PREFIX_PATH}/bin/ruby"
+LOG_PATH="${TMP}/lua-build.${SEED}.log"
+LUA_BIN="${PREFIX_PATH}/bin/lua"
 CWD="$(pwd)"
 
-if [ -z "$RUBY_BUILD_BUILD_PATH" ]; then
-  BUILD_PATH="${TMP}/ruby-build.${SEED}"
+if [ -z "$LUA_BUILD_BUILD_PATH" ]; then
+  BUILD_PATH="${TMP}/lua-build.${SEED}"
 else
-  BUILD_PATH="$RUBY_BUILD_BUILD_PATH"
+  BUILD_PATH="$LUA_BUILD_BUILD_PATH"
 fi
 
 exec 4<> "$LOG_PATH" # open the log file at fd 4
@@ -711,8 +558,8 @@ fi
 export LDFLAGS="-L'${PREFIX_PATH}/lib' ${LDFLAGS}"
 export CPPFLAGS="-I'${PREFIX_PATH}/include' ${CPPFLAGS}"
 
-unset RUBYOPT
-unset RUBYLIB
+unset LUAOPT
+unset LUALIB
 
 trap build_failed ERR
 mkdir -p "$BUILD_PATH"

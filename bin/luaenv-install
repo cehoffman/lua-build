@@ -1,41 +1,35 @@
 #!/usr/bin/env bash
 #
-# Summary: Install a Ruby version using the ruby-build plugin
+# Summary: Install a Lua version using the lua-build plugin
 #
-# Usage: rbenv install [-f|--force] [-k|--keep] [-v|--verbose] <version>
-#        rbenv install [-f|--force] [-k|--keep] [-v|--verbose] <definition-file>
-#        rbenv install -l|--list
+# Usage: luaenv install [-f|--force] [-k|--keep] [-v|--verbose] <version>
+#        luaenv install [-f|--force] [-k|--keep] [-v|--verbose] <definition-file>
+#        luaenv install -l|--list
 #
 #   -l/--list        List all available versions
 #   -f/--force       Install even if the version appears to be installed already
-#   -k/--keep        Keep source tree in $RBENV_BUILD_ROOT after installation
-#                    (defaults to $RBENV_ROOT/sources)
+#   -k/--keep        Keep source tree in $LUAENV_BUILD_ROOT after installation
+#                    (defaults to $LUAENV_ROOT/sources)
 #   -v/--verbose     Verbose mode: print compilation status to stdout
 #
-# For detailed information on installing Ruby versions with
-# ruby-build, including a list of environment variables for adjusting
-# compilation, see: https://github.com/sstephenson/ruby-build#usage
+# For detailed information on installing Lua versions with
+# lua-build, including a list of environment variables for adjusting
+# compilation, see: https://github.com/sstephenson/lua-build#usage
 #
 set -e
-[ -n "$RBENV_DEBUG" ] && set -x
+[ -n "$LUAENV_DEBUG" ] && set -x
 
-# Provide rbenv completions
+# Provide luaenv completions
 if [ "$1" = "--complete" ]; then
-  exec ruby-build --definitions
+  exec lua-build --definitions
 fi
 
-if [ -z "$RBENV_ROOT" ]; then
-  RBENV_ROOT="${HOME}/.rbenv"
+if [ -z "$LUAENV_ROOT" ]; then
+  LUAENV_ROOT="${HOME}/.luaenv"
 fi
 
 # Load shared library functions
-eval "$(ruby-build --lib)"
-
-usage() {
-  # We can remove the sed fallback once rbenv 0.4.0 is widely available.
-  rbenv-help install 2>/dev/null || sed -ne '/^#/!q;s/.//;s/.//;1,4d;p' < "$0"
-  [ -z "$1" ] || exit "$1"
-}
+eval "$(lua-build --lib)"
 
 unset FORCE
 unset KEEP
@@ -49,20 +43,20 @@ for option in "${OPTIONS[@]}"; do
     ;;
   "l" | "list" )
     echo "Available versions:"
-    ruby-build --definitions | sed 's/^/  /'
+    lua-build --definitions | sed 's/^/  /'
     exit
     ;;
   "f" | "force" )
     FORCE=true
     ;;
   "k" | "keep" )
-    [ -n "${RBENV_BUILD_ROOT}" ] || RBENV_BUILD_ROOT="${RBENV_ROOT}/sources"
+    [ -n "${LUAENV_BUILD_ROOT}" ] || LUAENV_BUILD_ROOT="${LUAENV_ROOT}/sources"
     ;;
   "v" | "verbose" )
     VERBOSE="-v"
     ;;
   "version" )
-    exec ruby-build --version
+    exec lua-build --version
     ;;
   * )
     usage 1
@@ -74,10 +68,10 @@ unset VERSION_NAME
 
 # The first argument contains the definition to install. If the
 # argument is missing, try to install whatever local app-specific
-# version is specified by rbenv. Show usage instructions if a local
+# version is specified by luaenv. Show usage instructions if a local
 # version is not specified.
 DEFINITION="${ARGUMENTS[0]}"
-[ -n "$DEFINITION" ] || DEFINITION="$(rbenv local 2>/dev/null || true)"
+[ -n "$DEFINITION" ] || DEFINITION="$(luaenv local 2>/dev/null || true)"
 [ -n "$DEFINITION" ] || usage 1
 
 
@@ -97,7 +91,7 @@ after_install() {
 }
 
 # Load plugin hooks.
-for script in $(rbenv-hooks install); do
+for script in $(luaenv-hooks install); do
   source "$script"
 done
 
@@ -105,14 +99,14 @@ done
 # Set VERSION_NAME from $DEFINITION, if it is not already set. Then
 # compute the installation prefix.
 [ -n "$VERSION_NAME" ] || VERSION_NAME="${DEFINITION##*/}"
-PREFIX="${RBENV_ROOT}/versions/${VERSION_NAME}"
+PREFIX="${LUAENV_ROOT}/versions/${VERSION_NAME}"
 
 [ -d "${PREFIX}" ] && PREFIX_EXISTS=1
 
 # If the installation prefix exists, prompt for confirmation unless
 # the --force option was specified.
 if [ -z "$FORCE" ] && [ -d "${PREFIX}/bin" ]; then
-  echo "rbenv: $PREFIX already exists" >&2
+  echo "luaenv: $PREFIX already exists" >&2
   read -p "continue with installation? (y/N) "
 
   case "$REPLY" in
@@ -121,16 +115,16 @@ if [ -z "$FORCE" ] && [ -d "${PREFIX}/bin" ]; then
   esac
 fi
 
-# If RBENV_BUILD_ROOT is set, always pass keep options to ruby-build.
-if [ -n "${RBENV_BUILD_ROOT}" ]; then
-  export RUBY_BUILD_BUILD_PATH="${RBENV_BUILD_ROOT}/${VERSION_NAME}"
+# If LUAENV_BUILD_ROOT is set, always pass keep options to lua-build.
+if [ -n "${LUAENV_BUILD_ROOT}" ]; then
+  export LUA_BUILD_BUILD_PATH="${LUAENV_BUILD_ROOT}/${VERSION_NAME}"
   KEEP="-k"
 fi
 
-# Set RUBY_BUILD_CACHE_PATH to $RBENV_ROOT/cache, if the directory
+# Set LUA_BUILD_CACHE_PATH to $LUAENV_ROOT/cache, if the directory
 # exists and the variable is not already set.
-if [ -z "${RUBY_BUILD_CACHE_PATH}" ] && [ -d "${RBENV_ROOT}/cache" ]; then
-  export RUBY_BUILD_CACHE_PATH="${RBENV_ROOT}/cache"
+if [ -z "${LUA_BUILD_CACHE_PATH}" ] && [ -d "${LUAENV_ROOT}/cache" ]; then
+  export LUA_BUILD_CACHE_PATH="${LUAENV_ROOT}/cache"
 fi
 
 
@@ -144,17 +138,17 @@ cleanup() {
 
 trap cleanup SIGINT
 
-# Invoke `ruby-build` and record the exit status in $STATUS. Run
-# `rbenv rehash` after a successful installation.
+# Invoke `lua-build` and record the exit status in $STATUS. Run
+# `luaenv rehash` after a successful installation.
 STATUS=0
-ruby-build $KEEP $VERBOSE "$DEFINITION" "$PREFIX" || STATUS="$?"
+lua-build $KEEP $VERBOSE "$DEFINITION" "$PREFIX" || STATUS="$?"
 
 # Execute `after_install` hooks.
 for hook in "${after_hooks[@]}"; do eval "$hook"; done
 
-# Run `rbenv-rehash` after a successful installation.
+# Run `luaenv-rehash` after a successful installation.
 if [ "$STATUS" == "0" ]; then
-  rbenv rehash
+  luaenv rehash
 else
   cleanup
 fi
