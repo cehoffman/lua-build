@@ -394,12 +394,16 @@ build_package_luajit() {
   local PACKAGE_CFLAGS="${package_var_name}_CFLAGS"
   { "$MAKE" $MAKE_OPTS amalg PREFIX="$PREFIX_PATH" XCFLAGS="${!PACKAGE_CFLAGS:--DLUAJIT_ENABLE_LUA52COMPAT}"
     "$MAKE" $MAKE_OPTS install PREFIX="$PREFIX_PATH"
+    cd "${PREFIX_PATH}/bin"
+    ln -sf luajit lua
   } >&4 2>&1
 }
 
 build_package_luvit() {
   { env -u CPPFLAGS -u LDFLAGS "$MAKE" $MAKE_OPTS PREFIX="$PREFIX_PATH"
     "$MAKE" $MAKE_OPTS install PREFIX="$PREFIX_PATH"
+    cd "${PREFIX_PATH}/bin"
+    ln -sf luvit lua
   } >&4 2>&1
 }
 
