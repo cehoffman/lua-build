@@ -380,7 +380,8 @@ build_package_lua() {
   [ "$os_name" == *sunos* ] && platform=solaris
   [ "$os_name" == *aix* ] && platform=aix
 
-  { "$MAKE" $MAKE_OPTS "${platform:-posix}" INSTALL_TOP="$PREFIX_PATH" INSTALL_MAN="$PREFIX_PATH/share/man/man1"
+  { sed -e "s:LUA_ROOT[ 	]*\"/usr/local/\":LUA_ROOT \"${PREFIX_PATH}/\":g" -i "" src/luaconf.h
+    "$MAKE" $MAKE_OPTS "${platform:-posix}" INSTALL_TOP="$PREFIX_PATH" INSTALL_MAN="$PREFIX_PATH/share/man/man1"
     "$MAKE" $MAKE_OPTS install INSTALL_TOP="$PREFIX_PATH" INSTALL_MAN="$PREFIX_PATH/share/man/man1"
   } >&4 2>&1
 }
