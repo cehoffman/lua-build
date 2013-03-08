@@ -1,0 +1,1 @@
+install_git "luajit-2.0-dev" "https://github.com/luvit/luajit-2.0.git" master luajit
