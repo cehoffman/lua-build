@@ -376,11 +376,12 @@ build_package_lua() {
   [ "$os_name" == *mingw* ] && platform=mingw
   [ "$os_name" == *bsd* ] && platform=bsd
   [ "$os_name" == *freebsd* ] && platform=freebsd
-  [ "$os_name" == *linux* ] && platform=linux
+  [ "$os_name" == linux ] && platform=linux
   [ "$os_name" == *sunos* ] && platform=solaris
   [ "$os_name" == *aix* ] && platform=aix
 
-  { sed -e "s:LUA_ROOT[ 	]*\"/usr/local/\":LUA_ROOT \"${PREFIX_PATH}/\":g" src/luaconf.h > src/luaconf.h
+  { mv src/luaconf.h src/luaconf.h.orig
+    sed -e "s:LUA_ROOT[ 	]*\"/usr/local/\":LUA_ROOT \"${PREFIX_PATH}/\":g" src/luaconf.h.orig > src/luaconf.h
     "$MAKE" $MAKE_OPTS "${platform:-posix}" INSTALL_TOP="$PREFIX_PATH" INSTALL_MAN="$PREFIX_PATH/share/man/man1"
     "$MAKE" $MAKE_OPTS install INSTALL_TOP="$PREFIX_PATH" INSTALL_MAN="$PREFIX_PATH/share/man/man1"
   } >&4 2>&1
