@@ -376,7 +376,7 @@ build_package_lua() {
   [ "$os_name" == *mingw* ] && platform=mingw
   [ "$os_name" == *bsd* ] && platform=bsd
   [ "$os_name" == *freebsd* ] && platform=freebsd
-  [ "$os_name" == *linux* ] && platform=linux
+  [ "$os_name" == linux ] && platform=linux
   [ "$os_name" == *sunos* ] && platform=solaris
   [ "$os_name" == *aix* ] && platform=aix
 
