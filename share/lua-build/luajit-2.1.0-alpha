@@ -1,0 +1,1 @@
+install_git "luajit-2.1.0-alpha" http://repo.or.cz/r/luajit-2.0.git v2.1 luajit

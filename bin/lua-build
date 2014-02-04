@@ -61,6 +61,10 @@ capitalize() {
   printf "%s" "$1" | tr a-z A-Z
 }
 
+lowercase() {
+  printf "%s" "$1" | tr A-Z a-z
+}
+
 build_failed() {
   { echo
     echo "BUILD FAILED"
@@ -397,7 +401,7 @@ build_package_luajit() {
   { "$MAKE" $MAKE_OPTS amalg PREFIX="$PREFIX_PATH" XCFLAGS="${!PACKAGE_CFLAGS:--DLUAJIT_ENABLE_LUA52COMPAT}"
     "$MAKE" $MAKE_OPTS install PREFIX="$PREFIX_PATH"
     cd "${PREFIX_PATH}/bin"
-    ln -sf luajit lua
+    ln -sf "$(lowercase "$package_name")" lua
   } >&4 2>&1
 }
 
