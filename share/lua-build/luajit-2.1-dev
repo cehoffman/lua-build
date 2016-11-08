@@ -1,0 +1,1 @@
+install_git "luajit-2.1-dev" "http://luajit.org/git/luajit-2.0.git" v2.1 luajit
