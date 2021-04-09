@@ -3,7 +3,7 @@ build_package_hotfix() {
   local PACKAGE_CFLAGS="${package_var_name}_CFLAGS"
 
   {
-    curl -L http://luajit.org/download/v2.0.1_hotfix1.patch | patch -p1
+    curl -L https://luajit.org/download/v2.0.1_hotfix1.patch | patch -p1
     "$MAKE" $MAKE_OPTS amalg PREFIX="$PREFIX_PATH" XCFLAGS="${!PACKAGE_CFLAGS:--DLUAJIT_ENABLE_LUA52COMPAT}"
     "$MAKE" $MAKE_OPTS install PREFIX="$PREFIX_PATH"
     cd "${PREFIX_PATH}/bin"
@@ -11,4 +11,4 @@ build_package_hotfix() {
   } >&4 2>&1
 }
 
-install_package "LuaJIT-2.0.1" "http://luajit.org/download/LuaJIT-2.0.1.tar.gz" hotfix
+install_package "LuaJIT-2.0.1" "https://luajit.org/download/LuaJIT-2.0.1.tar.gz" hotfix
