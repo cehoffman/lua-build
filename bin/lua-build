@@ -402,6 +402,7 @@ build_package_luajit() {
     "$MAKE" $MAKE_OPTS install PREFIX="$PREFIX_PATH"
     cd "${PREFIX_PATH}/bin"
     ln -sf "$(lowercase "$package_name")" lua
+    ln -sf "$(lowercase "$package_name")" luajit
   } >&4 2>&1
 }
 
