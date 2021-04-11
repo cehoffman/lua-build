@@ -1,1 +1,0 @@
-install_git "luajit-2.0.5" "https://github.com/LuaJIT/LuaJIT.git" v2.0 luajit
