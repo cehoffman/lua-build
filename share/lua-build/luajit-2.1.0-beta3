@@ -1,1 +1,1 @@
-install_package "LuaJIT-2.1.0-beta3" "http://luajit.org/download/LuaJIT-2.1.0-beta3.tar.gz#eae40bc29d06ee5e3078f9444fcea39b" luajit
+install_package "LuaJIT-2.1.0-beta3" "https://luajit.org/download/LuaJIT-2.1.0-beta3.tar.gz#eae40bc29d06ee5e3078f9444fcea39b" luajit

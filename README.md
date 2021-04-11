@@ -43,10 +43,10 @@ setting the `PREFIX` environment variable.
 To update lua-build after it has been installed, run `git pull` in
 your cloned copy of the repository, then re-run the install script.
 
-### Installing with Homebrew (for OS X users)
+### Installing with Homebrew (for macOS users)
 
-Mac OS X users can install lua-build with the
-[Homebrew](http://mxcl.github.com/homebrew/) package manager. This
+macOS users can install lua-build with the
+[Homebrew](https://brew.sh) package manager. This
 will give you access to the `lua-build` command. If you have luaenv
 installed, you will also be able to use the `luaenv install` command.
 
