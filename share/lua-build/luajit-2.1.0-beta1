@@ -1,0 +1,1 @@
+install_package "luajit-2.1.0-beta1" "https://github.com/LuaJIT/LuaJIT.git" v2.1.0-beta1 luajit
